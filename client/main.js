@@ -1,8 +1,8 @@
 import bot from './assets/bot.svg';
-import './assets/user.svg';
+import user from './assets/user.svg';
 
 const form = document.querySelector('form');
-const chatContainer = document.querySelector('#chat-container');
+const chatContainer = document.querySelector('#chat_container');
 
 let loadInterval;
 
@@ -12,18 +12,20 @@ function loader(element) {
   loadInterval = setInterval(() => {
     element.textContent += '.';
 
-    if (element.textContent === '...') {
+    if (element.textContent === '....') {
       element.textContent = '';
     }
   }, 300);
 }
 
+
+//text typing
 function typeText(element, text) {
   let index = 0;
 
   let interval = setInterval(() => {
     if (index < text.length) {
-      element.innerHTML += text.chatAt(index);
+      element.innerHTML += text.charAt(index);
       index++;
     } else {
       clearInterval(interval);
@@ -31,6 +33,8 @@ function typeText(element, text) {
   }, 20);
 }
 
+
+//generating a unique id for messages
 function generateUniqueId() {
   const timestamp = Date.now();
   const randomNumber = Math.random();
@@ -44,10 +48,10 @@ function chatStripe(isAi, value, uniqueId) {
     `
     <div class="wrapper ${isAi && 'ai'}">
       <div class="chat">
-        <div className="profile">
+        <div class="profile">
           <img src="${isAi ? bot : user}" alt="${isAi ? 'bot' : 'user'}" />
         </div>
-        <div class="message" id=${uniqueId} > ${value}</div>>
+        <div class="message" id=${uniqueId}> ${value}</div>>
       </div>
     </div>
     `
@@ -60,7 +64,7 @@ const handleSubmit = async (e) => {
   const data = new FormData(form);
 
   //user's chatstripe
-  charContainer.innerHTML += chatStripe(false, data.get('prompt'));
+  chatContainer.innerHTML += chatStripe(false, data.get('prompt'));
 
   form.reset();
 
@@ -73,7 +77,36 @@ const handleSubmit = async (e) => {
   const messageDiv = document.getElementById(uniqueId);
 
   loader(messageDiv);
+
+  //fetch data from server
+
+  const response = await fetch('http://localhost:5000', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      prompt: data.get('prompt')
+    })
+  })
+
+  clearInterval(loadInterval);
+  messageDiv.innerHTML = '';
+
+  if (response.ok) {
+    const data = await response.json();
+    const perseData = data.bot.trim();
+
+    typeText(messageDiv, perseData);
+  } else {
+    const err = await response.text();
+
+    messageDiv.innerHTML = "Something went wrong"
+
+    alert(err);
+  }
 }
+
 
 form.addEventListener('submit', handleSubmit);
 form.addEventListener('keyup', (e) => {
